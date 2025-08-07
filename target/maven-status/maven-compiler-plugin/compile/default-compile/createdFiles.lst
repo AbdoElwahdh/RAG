@@ -1,1 +1,5 @@
+com\example\rag\service\RagService.class
+com\example\rag\retriever\MilvusRetriever.class
+com\example\rag\config\ModelConfig.class
+com\example\rag\controller\RagController.class
 com\example\rag\RagApplication.class

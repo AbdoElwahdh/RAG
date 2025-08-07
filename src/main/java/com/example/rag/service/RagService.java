@@ -7,50 +7,32 @@ import dev.langchain4j.data.document.parser.TextDocumentParser;
 import dev.langchain4j.data.document.splitter.DocumentSplitters;
 import dev.langchain4j.model.chat.ChatLanguageModel;
 import dev.langchain4j.model.embedding.EmbeddingModel;
-import dev.langchain4j.model.ollama.OllamaChatModel;
-import dev.langchain4j.model.ollama.OllamaEmbeddingModel;
 import dev.langchain4j.store.embedding.EmbeddingStoreIngestor;
 import dev.langchain4j.store.embedding.milvus.MilvusEmbeddingStore;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.time.Duration;
 import java.util.List;
 
 @Service
 public class RagService {
 
-    // سنجعل النماذج عامة (public) ليسهل على الخدمات الأخرى استخدامها
-    public final EmbeddingModel embeddingModel;
-    public final MilvusEmbeddingStore milvusStore;
-    public final ChatLanguageModel chatModel;
-    public RagService() {
-        System.out.println("Step 1: Initializing Ollama Models and Milvus connection...");
+    private final EmbeddingModel embeddingModel;
+    private final MilvusEmbeddingStore milvusStore;
+    private final ChatLanguageModel chatModel;
 
-        // 1. إعداد نموذج التضمين (all-minilm)
-        this.embeddingModel = OllamaEmbeddingModel.builder()
-                .baseUrl("http://localhost:11434" )
-                .modelName("all-minilm")
-                .build();
-        System.out.println("  [SUCCESS] Ollama Embedding Model (all-minilm) is ready.");
+    @Autowired
+    public RagService(EmbeddingModel embeddingModel,
+                      MilvusEmbeddingStore milvusStore,
+                      ChatLanguageModel chatModel) {
 
-        // 2. إعداد نموذج الرد (phi3) -
-        this.chatModel = OllamaChatModel.builder()
-                .baseUrl("http://localhost:11434" )
-                .modelName("phi3")
-                .timeout(Duration.ofMinutes(5))
-                .build();
-        System.out.println("  [SUCCESS] Ollama Chat Model (phi3) is ready for future use.");
+        this.embeddingModel = embeddingModel;
+        this.milvusStore = milvusStore;
+        this.chatModel = chatModel;
 
-        // 3. إعداد الاتصال بـ Milvus
-        this.milvusStore = MilvusEmbeddingStore.builder()
-                .host("localhost")
-                .port(19530)
-                .collectionName("football_docs")
-                .dimension(384)
-                .build();
-        System.out.println("  [SUCCESS] Connection to Milvus is ready.");
+        System.out.println("Step 1: Models and Milvus injected successfully.");
     }
 
     public void ingestAndChunkData() {
