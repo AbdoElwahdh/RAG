@@ -32,9 +32,17 @@
     </dependency>
 
     <dependency>
+      <groupId>dev.langchain4j</groupId>
+      <artifactId>langchain4j-milvus</artifactId>
+      <version>0.32.0</version>
+    </dependency>
+
+    <!-- !!! المكتبة الجديدة والمهمة التي أضفناها الآن !!! -->
+    <dependency>
       <groupId>io.milvus</groupId>
       <artifactId>milvus-sdk-java</artifactId>
-      <version>2.3.4</version>
+      <version>2.4.0</version>
     </dependency>
+
   </dependencies>
 </project>
