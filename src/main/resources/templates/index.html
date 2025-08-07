@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>RAG Application</title>
+    <link rel="stylesheet" href="/webjars/bootstrap/5.3.0/css/bootstrap.min.css">
+    <style>
+        .answer-box {
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            padding: 20px;
+            margin-top: 20px;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <h1 class="mb-4">RAG Application</h1>
+            
+            <form th:action="@{/ask}" method="post">
+                <div class="mb-3">
+                    <label for="question" class="form-label">Your Question:</label>
+                    <textarea class="form-control" id="question" name="question" 
+                              rows="3" th:text="${question}"></textarea>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="topK" class="form-label">Number of results (topK):</label>
+                    <input type="number" class="form-control" id="topK" name="topK" 
+                           min="1" max="10" th:value="${topK}">
+                </div>
+                
+                <button type="submit" class="btn btn-primary">Ask</button>
+            </form>
+            
+            <div th:if="${answer}" class="answer-box mt-4">
+                <h5>Answer:</h5>
+                <p th:text="${answer}"></p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="/webjars/jquery/3.7.1/jquery.min.js"></script>
+<script src="/webjars/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
