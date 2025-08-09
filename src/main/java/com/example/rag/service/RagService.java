@@ -5,85 +5,93 @@ import dev.langchain4j.data.document.DocumentSplitter;
 import dev.langchain4j.data.document.loader.FileSystemDocumentLoader;
 import dev.langchain4j.data.document.parser.TextDocumentParser;
 import dev.langchain4j.data.document.splitter.DocumentSplitters;
+import dev.langchain4j.memory.chat.MessageWindowChatMemory;
 import dev.langchain4j.model.chat.ChatLanguageModel;
 import dev.langchain4j.model.embedding.EmbeddingModel;
 import dev.langchain4j.model.ollama.OllamaChatModel;
 import dev.langchain4j.model.ollama.OllamaEmbeddingModel;
+import dev.langchain4j.rag.content.retriever.ContentRetriever;
+import dev.langchain4j.rag.content.retriever.EmbeddingStoreContentRetriever;
+import dev.langchain4j.service.AiServices;
 import dev.langchain4j.store.embedding.EmbeddingStoreIngestor;
 import dev.langchain4j.store.embedding.milvus.MilvusEmbeddingStore;
+import jakarta.annotation.PostConstruct;
 import org.springframework.stereotype.Service;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Duration;
-import java.util.List;
 
 @Service
 public class RagService {
 
-    // سنجعل النماذج عامة (public) ليسهل على الخدمات الأخرى استخدامها
-    public final EmbeddingModel embeddingModel;
-    public final MilvusEmbeddingStore milvusStore;
-    public final ChatLanguageModel chatModel;
+    private final EmbeddingModel embeddingModel;
+    private final MilvusEmbeddingStore milvusStore;
+    private final ChatLanguageModel chatModel;
+    private Assistant assistant; // المساعد الذكي الذي سيرد على الأسئلة
+
     public RagService() {
-        System.out.println("Step 1: Initializing Ollama Models and Milvus connection...");
-
-        // 1. إعداد نموذج التضمين (all-minilm)
-        this.embeddingModel = OllamaEmbeddingModel.builder()
-                .baseUrl("http://localhost:11434" )
-                .modelName("all-minilm")
-                .build();
-        System.out.println("  [SUCCESS] Ollama Embedding Model (all-minilm) is ready.");
-
-        // 2. إعداد نموذج الرد (phi3) -
-        this.chatModel = OllamaChatModel.builder()
-                .baseUrl("http://localhost:11434" )
-                .modelName("phi3")
-                .timeout(Duration.ofMinutes(5))
-                .build();
-        System.out.println("  [SUCCESS] Ollama Chat Model (phi3) is ready for future use.");
-
-        // 3. إعداد الاتصال بـ Milvus
-        this.milvusStore = MilvusEmbeddingStore.builder()
-                .host("localhost")
-                .port(19530)
-                .collectionName("football_docs")
-                .dimension(384)
-                .build();
-        System.out.println("  [SUCCESS] Connection to Milvus is ready.");
+        // إعداد النماذج والاتصال (لا تغيير هنا)
+        this.embeddingModel = OllamaEmbeddingModel.builder().baseUrl("http://localhost:11434" ).modelName("all-minilm").build();
+        this.chatModel = OllamaChatModel.builder().baseUrl("http://localhost:11434" ).modelName("tinyllama").timeout(Duration.ofMinutes(5)).build();
+        this.milvusStore = MilvusEmbeddingStore.builder().host("localhost").port(19530).collectionName("football_docs").dimension(384).build();
     }
 
-    public void ingestAndChunkData() {
-        System.out.println("\nStep 2: Starting data ingestion and chunking process...");
+    // PostConstruct ستجعل هذه الدالة تعمل تلقائيًا بعد إنشاء الخدمة
+    @PostConstruct
+    private void initialize() {
+        System.out.println("==================================================");
+        System.out.println("Initializing RAG Pipeline...");
 
+        // 1. بناء الـ Retriever الذي يبحث في Milvus
+        ContentRetriever contentRetriever = EmbeddingStoreContentRetriever.builder()
+                .embeddingStore(this.milvusStore)
+                .embeddingModel(this.embeddingModel)
+                .maxResults(3) // استرجاع أفضل 3 أجزاء ذات صلة
+                .minScore(0.6) // تجاهل الأجزاء ذات الصلة الضعيفة
+                .build();
+        System.out.println("  [SUCCESS] Content Retriever is configured to search in Milvus.");
+
+        // 2. بناء المساعد الذكي الذي يربط كل شيء
+        this.assistant = AiServices.builder(Assistant.class)
+                .chatLanguageModel(this.chatModel)
+                .contentRetriever(contentRetriever)
+                .chatMemory(MessageWindowChatMemory.withMaxMessages(10)) // إضافة ذاكرة بسيطة للمحادثة
+                .build();
+        System.out.println("  [SUCCESS] AI Assistant is ready.");
+
+        // 3. تخزين البيانات عند بدء التشغيل
+        ingestData();
+        System.out.println("RAG Pipeline Initialized. The application is ready to accept questions.");
+        System.out.println("==================================================");
+    }
+
+    private void ingestData() {
+        // يمكن إضافة منطق هنا للتحقق مما إذا كانت البيانات موجودة بالفعل لتجنب إعادة التخزين
+        System.out.println("  - Starting data ingestion...");
         DocumentSplitter splitter = DocumentSplitters.recursive(400, 40);
-
         EmbeddingStoreIngestor ingestor = EmbeddingStoreIngestor.builder()
                 .documentSplitter(splitter)
                 .embeddingStore(this.milvusStore)
                 .embeddingModel(this.embeddingModel)
                 .build();
-
         try {
             Path filePath = Paths.get("src/main/resources/data.txt");
             Document document = FileSystemDocumentLoader.loadDocument(filePath, new TextDocumentParser());
-            System.out.println("  - Reading document from data.txt...");
-
-            List<String> chunks = splitter.split(document).stream()
-                    .map(segment -> segment.text())
-                    .toList();
-            System.out.println("  - Document has been split into " + chunks.size() + " chunks.");
-
             ingestor.ingest(document);
-
-            System.out.println("\n==================================================");
-            System.out.println("  TASK COMPLETED SUCCESSFULLY!");
-            System.out.println("  The document has been split, and all " + chunks.size() + " chunks are now stored in Milvus.");
-            System.out.println("  Both Embedding and Chat models are initialized and ready for the next developer.");
-            System.out.println("==================================================");
-
+            System.out.println("  - Data ingestion complete.");
         } catch (Exception e) {
-            throw new RuntimeException("FATAL: Failed to ingest document.", e);
+            System.err.println("  - Could not ingest data: " + e.getMessage());
         }
+    }
+
+    // الدالة الجديدة التي سيستدعيها الـ Controller
+    public String ask(String question) {
+        return assistant.chat(question);
+    }
+
+    // واجهة المساعد
+    interface Assistant {
+        String chat(String userMessage);
     }
 }
