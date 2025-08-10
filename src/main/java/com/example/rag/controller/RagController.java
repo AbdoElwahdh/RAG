@@ -14,14 +14,14 @@ public class RagController {
 
     private final RagService ragService;
 
-    // Spring سيقوم بحقن RagService هنا تلقائيًا
+    
     @Autowired
     public RagController(RagService ragService ) {
         this.ragService = ragService;
     }
 
     // هذا هو الرابط الذي سنستخدمه في المتصفح
-    // مثال: http://localhost:8080/ask?question=Who is Lionel Messi
+    // مثال: http://localhost:8082/ask?question=Who is Lionel Messi
     @GetMapping("/ask" )
     public ResponseEntity<Map<String, String>> askQuestion(@RequestParam String question) {
         if (question == null || question.trim().isEmpty()) {
