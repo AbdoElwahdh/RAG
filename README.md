@@ -22,8 +22,9 @@
 ## Features
 - **Document Processing**: Chunking and embedding with `all-minilm`
 - **Vector Search**: Milvus for low-latency semantic search
-- **LLM Integration**: `phi3` for local answer generation
+- **LLM Integration**: `tinyllama` for local answer generation
 - **Spring Boot**: REST API with Docker support
+- Web Interface: A user-friendly chat interface built with plain HTML, CSS, and JavaScript.
 
 ## Prerequisites
 
@@ -48,17 +49,20 @@ docker-compose up -d --build
 ### 2. Initialize Models
 ```bash
 # In a new terminal
-docker exec ollama ollama pull phi3
+docker exec ollama ollama pull tinyllama
 docker exec ollama ollama pull all-minilm
 ```
 
 ### 3. Test the System
 ```bash
 # Ingest sample data
-curl -X POST http://localhost:8080/api/rag/ingest
+curl -X POST http://localhost:8082/api/rag/ingest
 
 # Ask a question
-curl "http://localhost:8080/api/rag/ask?question=What%20is%20RAG?"
+curl "http://localhost:8082/api/rag/ask?question=What%20is%20RAG?"
+
+#Access the Application
+http://localhost:8082/
 ```
 
 ## Local Development
@@ -74,7 +78,7 @@ curl "http://localhost:8080/api/rag/ask?question=What%20is%20RAG?"
 - **Ollama**:
   ```bash
   curl -fsSL https://ollama.com/install.sh | sh
-  ollama pull phi3
+  ollama pull tinyllama
   ollama serve
   ```
 
@@ -149,7 +153,7 @@ Edit `docker-compose.yml` to change models:
 services:
   ollama:
     environment:
-      - OLLAMA_MODELS=phi3,all-minilm
+      - OLLAMA_MODELS=tinyllama,all-minilm
 ```
 
 ## Troubleshooting
@@ -158,9 +162,9 @@ services:
 1. **Port Conflicts**:
    ```bash
    # Windows
-   netstat -ano | findstr :8080
+   netstat -ano | findstr :8082
    # Linux/macOS
-   lsof -i :8080
+   lsof -i :8082
    ```
 
 2. **Ollama Model Errors**:
