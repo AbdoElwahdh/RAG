@@ -28,16 +28,16 @@ public class RagService {
     private final EmbeddingModel embeddingModel;
     private final MilvusEmbeddingStore milvusStore;
     private final ChatLanguageModel chatModel;
-    private Assistant assistant; // المساعد الذكي الذي سيرد على الأسئلة
+    private Assistant assistant; 
 
     public RagService() {
-        // إعداد النماذج والاتصال (لا تغيير هنا)
+        // إعداد النماذج والاتصال 
         this.embeddingModel = OllamaEmbeddingModel.builder().baseUrl("http://localhost:11434" ).modelName("all-minilm").build();
         this.chatModel = OllamaChatModel.builder().baseUrl("http://localhost:11434" ).modelName("tinyllama").timeout(Duration.ofMinutes(5)).build();
         this.milvusStore = MilvusEmbeddingStore.builder().host("localhost").port(19530).collectionName("football_docs").dimension(384).build();
     }
 
-    // PostConstruct ستجعل هذه الدالة تعمل تلقائيًا بعد إنشاء الخدمة
+  
     @PostConstruct
     private void initialize() {
         System.out.println("==================================================");
@@ -47,8 +47,8 @@ public class RagService {
         ContentRetriever contentRetriever = EmbeddingStoreContentRetriever.builder()
                 .embeddingStore(this.milvusStore)
                 .embeddingModel(this.embeddingModel)
-                .maxResults(3) // استرجاع أفضل 3 أجزاء ذات صلة
-                .minScore(0.6) // تجاهل الأجزاء ذات الصلة الضعيفة
+                .maxResults(3) 
+                .minScore(0.6)
                 .build();
         System.out.println("  [SUCCESS] Content Retriever is configured to search in Milvus.");
 
@@ -56,7 +56,7 @@ public class RagService {
         this.assistant = AiServices.builder(Assistant.class)
                 .chatLanguageModel(this.chatModel)
                 .contentRetriever(contentRetriever)
-                .chatMemory(MessageWindowChatMemory.withMaxMessages(10)) // إضافة ذاكرة بسيطة للمحادثة
+                .chatMemory(MessageWindowChatMemory.withMaxMessages(10)) 
                 .build();
         System.out.println("  [SUCCESS] AI Assistant is ready.");
 
@@ -67,7 +67,7 @@ public class RagService {
     }
 
     private void ingestData() {
-        // يمكن إضافة منطق هنا للتحقق مما إذا كانت البيانات موجودة بالفعل لتجنب إعادة التخزين
+      
         System.out.println("  - Starting data ingestion...");
         DocumentSplitter splitter = DocumentSplitters.recursive(400, 40);
         EmbeddingStoreIngestor ingestor = EmbeddingStoreIngestor.builder()
