@@ -20,8 +20,8 @@ public class RagController {
         this.ragService = ragService;
     }
 
-    // هذا هو الرابط الذي سنستخدمه في المتصفح
-    // مثال: http://localhost:8082/ask?question=Who is Lionel Messi
+    // This is the endpoint we will use in the browser
+    // Example: http://localhost:8080/ask?question=Who is Lionel Messi
     @GetMapping("/ask" )
     public ResponseEntity<Map<String, String>> askQuestion(@RequestParam String question) {
         if (question == null || question.trim().isEmpty()) {
@@ -29,10 +29,10 @@ public class RagController {
         }
 
         System.out.println("\nReceived a new question via API: '" + question + "'");
-        // استدعاء الخدمة التي تحتوي على منطق RAG
+        // Call the service that contains the RAG logic
         String answer = ragService.ask(question);
 
-        // إرجاع الإجابة في صيغة JSON
+        // Return the answer as JSON
         return ResponseEntity.ok(Map.of(
                 "question", question,
                 "answer", answer

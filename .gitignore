@@ -27,8 +27,14 @@ nbproject/
 Thumbs.db # Windows files
 
 # Docker and container-related generated data
-volumes/
-# This is crucial as it contains all runtime data for Milvus, MinIO, and Etcd
+# We ignore the contents of 'volumes/' but allow the directories to be tracked
+volumes/*
+!volumes/milvus/
+volumes/milvus/*
+!volumes/milvus/.gitkeep
+!volumes/minio/
+volumes/minio/*
+!volumes/minio/.gitkeep
 
 # Environment variables files
 .env

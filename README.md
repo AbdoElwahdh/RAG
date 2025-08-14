@@ -56,13 +56,13 @@ docker exec ollama ollama pull all-minilm
 ### 3. Test the System
 ```bash
 # Ingest sample data
-curl -X POST http://localhost:8082/api/rag/ingest
+curl -X POST http://localhost:8080/api/rag/ingest
 
 # Ask a question
-curl "http://localhost:8082/api/rag/ask?question=What%20is%20RAG?"
+curl "http://localhost:8080/api/rag/ask?question=What%20is%20RAG?"
 
 #Access the Application
-http://localhost:8082/
+http://localhost:8080/
 ```
 
 ## Local Development
@@ -162,9 +162,9 @@ services:
 1. **Port Conflicts**:
    ```bash
    # Windows
-   netstat -ano | findstr :8082
+   netstat -ano | findstr :8080
    # Linux/macOS
-   lsof -i :8082
+   lsof -i :8080
    ```
 
 2. **Ollama Model Errors**:

@@ -16,6 +16,7 @@ import dev.langchain4j.service.AiServices;
 import dev.langchain4j.store.embedding.EmbeddingStoreIngestor;
 import dev.langchain4j.store.embedding.milvus.MilvusEmbeddingStore;
 import jakarta.annotation.PostConstruct;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.nio.file.Path;
@@ -28,47 +29,69 @@ public class RagService {
     private final EmbeddingModel embeddingModel;
     private final MilvusEmbeddingStore milvusStore;
     private final ChatLanguageModel chatModel;
-    private Assistant assistant; 
+    private Assistant assistant;
 
-    public RagService() {
-        // إعداد النماذج والاتصال 
-        this.embeddingModel = OllamaEmbeddingModel.builder().baseUrl("http://localhost:11434" ).modelName("all-minilm").build();
-        this.chatModel = OllamaChatModel.builder().baseUrl("http://localhost:11434" ).modelName("tinyllama").timeout(Duration.ofMinutes(5)).build();
-        this.milvusStore = MilvusEmbeddingStore.builder().host("localhost").port(19530).collectionName("football_docs").dimension(384).build();
+    // Inject configuration values from application.properties
+    public RagService(
+            // Milvus values
+            @Value("${milvus.host}") String milvusHost,
+            @Value("${milvus.port}") int milvusPort,
+            // Ollama values
+            @Value("${ollama.host}") String ollamaHost,
+            @Value("${ollama.port}") int ollamaPort
+    ) {
+        // Set up the EmbeddingModel for Ollama using the correct Docker service name
+        this.embeddingModel = OllamaEmbeddingModel.builder()
+                .baseUrl("http://" + ollamaHost + ":" + ollamaPort)
+                .modelName("all-minilm")
+                .build();
+        
+        // Set up the ChatModel for Ollama using the correct Docker service name
+        this.chatModel = OllamaChatModel.builder()
+                .baseUrl("http://" + ollamaHost + ":" + ollamaPort)
+                .modelName("tinyllama")
+                .timeout(Duration.ofMinutes(5))
+                .build();
+        
+        // Set up Milvus Embedding Store using the correct Docker service name
+        this.milvusStore = MilvusEmbeddingStore.builder()
+                .host(milvusHost)
+                .port(milvusPort)
+                .collectionName("football_docs") 
+                .dimension(384) 
+                .build();
     }
 
-  
     @PostConstruct
     private void initialize() {
         System.out.println("==================================================");
         System.out.println("Initializing RAG Pipeline...");
 
-        // 1. بناء الـ Retriever الذي يبحث في Milvus
+        // 1. Build the Retriever that searches in Milvus
         ContentRetriever contentRetriever = EmbeddingStoreContentRetriever.builder()
                 .embeddingStore(this.milvusStore)
                 .embeddingModel(this.embeddingModel)
-                .maxResults(3) 
+                .maxResults(3)
                 .minScore(0.6)
                 .build();
-        System.out.println("  [SUCCESS] Content Retriever is configured to search in Milvus.");
+        System.out.println("[SUCCESS] Content Retriever is configured to search in Milvus.");
 
-        // 2. بناء المساعد الذكي الذي يربط كل شيء
+        // 2. Build the AI Assistant that connects everything
         this.assistant = AiServices.builder(Assistant.class)
                 .chatLanguageModel(this.chatModel)
                 .contentRetriever(contentRetriever)
-                .chatMemory(MessageWindowChatMemory.withMaxMessages(10)) 
+                .chatMemory(MessageWindowChatMemory.withMaxMessages(10))
                 .build();
-        System.out.println("  [SUCCESS] AI Assistant is ready.");
+        System.out.println("[SUCCESS] AI Assistant is ready.");
 
-        // 3. تخزين البيانات عند بدء التشغيل
+        // 3. Ingest the data at startup
         ingestData();
         System.out.println("RAG Pipeline Initialized. The application is ready to accept questions.");
         System.out.println("==================================================");
     }
 
     private void ingestData() {
-      
-        System.out.println("  - Starting data ingestion...");
+        System.out.println("- Starting data ingestion...");
         DocumentSplitter splitter = DocumentSplitters.recursive(400, 40);
         EmbeddingStoreIngestor ingestor = EmbeddingStoreIngestor.builder()
                 .documentSplitter(splitter)
@@ -79,18 +102,18 @@ public class RagService {
             Path filePath = Paths.get("src/main/resources/data.txt");
             Document document = FileSystemDocumentLoader.loadDocument(filePath, new TextDocumentParser());
             ingestor.ingest(document);
-            System.out.println("  - Data ingestion complete.");
+            System.out.println("- Data ingestion complete.");
         } catch (Exception e) {
-            System.err.println("  - Could not ingest data: " + e.getMessage());
+            System.err.println("- Could not ingest data: " + e.getMessage());
         }
     }
 
-    // الدالة الجديدة التي سيستدعيها الـ Controller
+    // Method that will be called by the Controller
     public String ask(String question) {
         return assistant.chat(question);
     }
 
-    // واجهة المساعد
+    // Assistant interface
     interface Assistant {
         String chat(String userMessage);
     }
